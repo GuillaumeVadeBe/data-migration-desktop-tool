@@ -42,6 +42,10 @@ namespace Cosmos.DataTransfer.ParquetExtension
                 {
                     coltype = colval.GetType();
                 }
+                if (col == "Timestamp" && coltype == typeof(DateTimeOffset))
+                {
+                    continue;
+                }
                 if (current == null)
                 {
                     var newcol = new ParquetDataCol(col, coltype);
