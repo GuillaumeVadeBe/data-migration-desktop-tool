@@ -70,9 +70,8 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             if (totalBytes != 0)
             {
                 var totalMib = totalBytes / 1024 / 1024;
-                var rate = totalMib / (sw.ElapsedMilliseconds / 1000);
 
-                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} minutes ({Rate} MiB/s).", settings.BlobName, totalMib, sw.ElapsedMilliseconds / 1000 / 60, rate);
+                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} seconds.", settings.BlobName, totalMib, sw.ElapsedMilliseconds / 1000);
             }
         }
 
