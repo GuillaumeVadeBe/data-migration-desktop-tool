@@ -54,7 +54,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
                 {
                     if (DateTime.UtcNow - lastLogTime >= logInterval)
                     {
-                        logger.LogInformation("{BlobName}: transferred {TotalMiB} MiB to Azure Blob", settings.BlobName, l / 1024/1024);
+                        logger.LogInformation("{BlobName}: transferred {TotalMiB} MiB to Azure Blob", settings.BlobName, (double) l / 1024/1024);
                         lastLogTime = DateTime.UtcNow;
                     }
 
@@ -69,9 +69,9 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
 
             if (totalBytes != 0)
             {
-                var totalMib = totalBytes / 1024 / 1024;
+                var totalMib = (double) totalBytes / 1024 / 1024;
 
-                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} seconds.", settings.BlobName, totalMib, sw.ElapsedMilliseconds / 1000);
+                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} seconds.", settings.BlobName, totalMib, (double) sw.ElapsedMilliseconds / 1000);
             }
         }
 
