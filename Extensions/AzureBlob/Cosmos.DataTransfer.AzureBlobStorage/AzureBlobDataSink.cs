@@ -1,4 +1,5 @@
-﻿using Azure.Identity;
+﻿using System.Diagnostics;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
@@ -40,20 +41,45 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
 
             logger.LogInformation("Saving file '{File}' to Azure Blob Container '{ContainerName}'", settings.BlobName, settings.ContainerName);
 
+            var lastLogTime = DateTime.MinValue;
+            var logInterval = TimeSpan.FromMinutes(1);
+            long totalBytes = 0;
+
+            var sw = new Stopwatch();
+            sw.Start();
             await using var blobStream = await blob.OpenWriteAsync(true, new BlockBlobOpenWriteOptions
             {
                 BufferSize = settings.MaxBlockSizeinKB * 1024L,
                 ProgressHandler = new Progress<long>(l =>
                 {
-                    logger.LogInformation("Transferred {UploadedBytes} bytes to Azure Blob", l);
+                    if (DateTime.UtcNow - lastLogTime >= logInterval)
+                    {
+                        logger.LogInformation("Transferred {TotalMiB} bytes to Azure Blob", l/1024/1024);
+                        lastLogTime = DateTime.UtcNow;
+                    }
+
+                    totalBytes = l;
                 })
+                
             }, cancellationToken);
             await writeToStream(blobStream);
+            
+            sw.Stop();
+
+            var totalMib = totalBytes / 1024 / 1024;
+            var rate = totalMib / sw.ElapsedMilliseconds / 1000;
+
+            logger.LogInformation("Transferred {TotalMiB} Mib to Azure Blob in {TotalTime} minutes ({Rate} MiB/s).", totalMib, sw.ElapsedMilliseconds/1000/60, rate);
         }
 
         public IEnumerable<IDataExtensionSettings> GetSettings()
         {
             yield return new AzureBlobSinkSettings();
+        }
+
+        private void LogBytes()
+        {
+
         }
     }
 }
