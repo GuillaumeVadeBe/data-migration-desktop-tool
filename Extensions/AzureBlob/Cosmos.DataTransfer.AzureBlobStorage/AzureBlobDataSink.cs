@@ -45,8 +45,8 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             var logInterval = TimeSpan.FromMinutes(1);
             long totalBytes = 0;
 
-            var sw = new Stopwatch();
-            sw.Start();
+            var swOpenWrite = new Stopwatch();
+            swOpenWrite.Start();
             await using var blobStream = await blob.OpenWriteAsync(true, new BlockBlobOpenWriteOptions
             {
                 BufferSize = settings.MaxBlockSizeinKB * 1024L,
@@ -62,16 +62,19 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
                 })
                 
             }, cancellationToken);
+            swOpenWrite.Stop();
 
+            var swWrite = new Stopwatch();
+            swWrite.Start();
             await writeToStream(blobStream);
-            
-            sw.Stop();
+            swWrite.Stop();
 
+            logger.LogInformation("{BlobName}: open write for blob took {TotalTime} seconds.", settings.BlobName, swOpenWrite.Elapsed.Seconds);
             if (totalBytes != 0)
             {
                 var totalMib = (double) totalBytes / 1024 / 1024;
 
-                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} seconds.", settings.BlobName, totalMib, (double) sw.ElapsedMilliseconds / 1000);
+                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} seconds.", settings.BlobName, totalMib, swWrite.Elapsed.Seconds);
             }
         }
 
