@@ -41,7 +41,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
 
             logger.LogInformation("Saving file '{File}' to Azure Blob Container '{ContainerName}'", settings.BlobName, settings.ContainerName);
 
-            var lastLogTime = DateTime.MinValue;
+            var lastLogTime = DateTime.UtcNow;
             var logInterval = TimeSpan.FromMinutes(1);
             long totalBytes = 0;
 
@@ -54,7 +54,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
                 {
                     if (DateTime.UtcNow - lastLogTime >= logInterval)
                     {
-                        logger.LogInformation("Transferred {TotalMiB} bytes to Azure Blob", l/1024/1024);
+                        logger.LogInformation("{BlobName}: transferred {TotalMiB} MiB to Azure Blob", settings.BlobName, l / 1024/1024);
                         lastLogTime = DateTime.UtcNow;
                     }
 
@@ -62,24 +62,23 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
                 })
                 
             }, cancellationToken);
+
             await writeToStream(blobStream);
             
             sw.Stop();
 
-            var totalMib = totalBytes / 1024 / 1024;
-            var rate = totalMib / sw.ElapsedMilliseconds / 1000;
+            if (totalBytes != 0)
+            {
+                var totalMib = totalBytes / 1024 / 1024;
+                var rate = totalMib / sw.ElapsedMilliseconds / 1000;
 
-            logger.LogInformation("Transferred {TotalMiB} Mib to Azure Blob in {TotalTime} minutes ({Rate} MiB/s).", totalMib, sw.ElapsedMilliseconds/1000/60, rate);
+                logger.LogInformation("{BlobName}: transferred {TotalMiB} Mib to Azure Blob in {TotalTime} minutes ({Rate} MiB/s).", settings.BlobName, totalMib, sw.ElapsedMilliseconds / 1000 / 60, rate);
+            }
         }
 
         public IEnumerable<IDataExtensionSettings> GetSettings()
         {
             yield return new AzureBlobSinkSettings();
-        }
-
-        private void LogBytes()
-        {
-
         }
     }
 }
