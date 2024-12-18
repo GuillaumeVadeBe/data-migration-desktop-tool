@@ -19,7 +19,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             BlobContainerClient account;
             if (settings.UseRbacAuth)
             {
-                logger.LogInformation("Connecting to Storage account {AccountEndpoint} using {UseRbacAuth} with {EnableInteractiveCredentials}'", settings.AccountEndpoint, nameof(AzureBlobSourceSettings.UseRbacAuth), nameof(AzureBlobSourceSettings.EnableInteractiveCredentials));
+                logger.LogInformation("Connecting to Storage account {AccountEndpoint} using {UseRbacAuth} with {EnableInteractiveCredentials}", settings.AccountEndpoint, nameof(AzureBlobSourceSettings.UseRbacAuth), nameof(AzureBlobSourceSettings.EnableInteractiveCredentials));
 
                 var credential = new DefaultAzureCredential(includeInteractiveCredentials: settings.EnableInteractiveCredentials);
 #pragma warning disable CS8604 // Validate above ensures AccountEndpoint is not null
@@ -31,7 +31,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             }
             else
             {
-                logger.LogInformation("Connecting to Storage account using {ConnectionString}'", nameof(AzureBlobSourceSettings.ConnectionString));
+                logger.LogInformation("Connecting to Storage account using {ConnectionString}", nameof(AzureBlobSourceSettings.ConnectionString));
 
                 account = new BlobContainerClient(settings.ConnectionString, settings.ContainerName);
             }
@@ -45,8 +45,6 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             var logInterval = TimeSpan.FromMinutes(1);
             long totalBytes = 0;
 
-            var swOpenWrite = new Stopwatch();
-            swOpenWrite.Start();
             await using var blobStream = await blob.OpenWriteAsync(true, new BlockBlobOpenWriteOptions
             {
                 BufferSize = settings.MaxBlockSizeinKB * 1024L,
@@ -62,14 +60,12 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
                 })
                 
             }, cancellationToken);
-            swOpenWrite.Stop();
 
             var swWrite = new Stopwatch();
             swWrite.Start();
             await writeToStream(blobStream);
             swWrite.Stop();
 
-            logger.LogInformation("{BlobName}: open write for blob took {TotalTime} seconds.", settings.BlobName, swOpenWrite.Elapsed.Seconds);
             if (totalBytes != 0)
             {
                 var totalMib = (double) totalBytes / 1024 / 1024;
