@@ -33,6 +33,7 @@ namespace Cosmos.DataTransfer.ParquetExtension
         {
             ColumnName = name;
             ColumnType = coltype;
+
             if (coltype != System.Type.Missing.GetType())
             {
                 ParquetDataType = MapDataType(name, coltype);

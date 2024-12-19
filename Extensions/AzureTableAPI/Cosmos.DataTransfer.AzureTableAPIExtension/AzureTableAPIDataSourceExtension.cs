@@ -23,23 +23,14 @@ namespace Cosmos.DataTransfer.AzureTableAPIExtension
             var serviceClient = new TableServiceClient(settings.ConnectionString);
             var tableClient = serviceClient.GetTableClient(settings.Table);
 
-            //Pageable<TableEntity> queryResultsFilter = tableClient.Query<TableEntity>(filter: $"PartitionKey eq '{partitionKey}'");
-            AsyncPageable<TableEntity> queryResults;
-            if (!string.IsNullOrWhiteSpace(settings.QueryFilter)) {
-                queryResults = tableClient.QueryAsync<TableEntity>(filter: settings.QueryFilter);
-            } else {
-                queryResults = tableClient.QueryAsync<TableEntity>();
-            }
+            var queryResults = !string.IsNullOrWhiteSpace(settings.QueryFilter)
+                ? tableClient.QueryAsync<TableEntity>(filter: settings.QueryFilter, cancellationToken: cancellationToken)
+                : tableClient.QueryAsync<TableEntity>(cancellationToken: cancellationToken);
 
-            var enumerator = queryResults.GetAsyncEnumerator();
-            while (await enumerator.MoveNextAsync())
+            await foreach (var entity in queryResults.WithCancellation(cancellationToken))
             {
-                yield return new AzureTableAPIDataItem(enumerator.Current, settings.PartitionKeyFieldName, settings.RowKeyFieldName);
+                yield return new AzureTableAPIDataItem(entity, settings.PartitionKeyFieldName, settings.RowKeyFieldName);
             }
-            //do
-            //{
-            //    yield return new AzureTableAPIDataItem(enumerator.Current, settings.PartitionKeyFieldName, settings.RowKeyFieldName);
-            //} while (await enumerator.MoveNextAsync());
         }
 
         public IEnumerable<IDataExtensionSettings> GetSettings()

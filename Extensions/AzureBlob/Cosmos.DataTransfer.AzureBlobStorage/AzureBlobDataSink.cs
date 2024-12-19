@@ -1,4 +1,5 @@
-﻿using Azure.Identity;
+﻿using System.Diagnostics;
+using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
@@ -18,7 +19,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             BlobContainerClient account;
             if (settings.UseRbacAuth)
             {
-                logger.LogInformation("Connecting to Storage account {AccountEndpoint} using {UseRbacAuth} with {EnableInteractiveCredentials}'", settings.AccountEndpoint, nameof(AzureBlobSourceSettings.UseRbacAuth), nameof(AzureBlobSourceSettings.EnableInteractiveCredentials));
+                logger.LogInformation("Connecting to Storage account {AccountEndpoint} using {UseRbacAuth} with {EnableInteractiveCredentials}", settings.AccountEndpoint, nameof(AzureBlobSourceSettings.UseRbacAuth), nameof(AzureBlobSourceSettings.EnableInteractiveCredentials));
 
                 var credential = new DefaultAzureCredential(includeInteractiveCredentials: settings.EnableInteractiveCredentials);
 #pragma warning disable CS8604 // Validate above ensures AccountEndpoint is not null
@@ -30,7 +31,7 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
             }
             else
             {
-                logger.LogInformation("Connecting to Storage account using {ConnectionString}'", nameof(AzureBlobSourceSettings.ConnectionString));
+                logger.LogInformation("Connecting to Storage account using {ConnectionString}", nameof(AzureBlobSourceSettings.ConnectionString));
 
                 account = new BlobContainerClient(settings.ConnectionString, settings.ContainerName);
             }
@@ -40,15 +41,37 @@ namespace Cosmos.DataTransfer.AzureBlobStorage
 
             logger.LogInformation("Saving file '{File}' to Azure Blob Container '{ContainerName}'", settings.BlobName, settings.ContainerName);
 
+            var lastLogTime = DateTime.UtcNow;
+            var logInterval = TimeSpan.FromMinutes(1);
+            long totalBytes = 0;
+
             await using var blobStream = await blob.OpenWriteAsync(true, new BlockBlobOpenWriteOptions
             {
                 BufferSize = settings.MaxBlockSizeinKB * 1024L,
                 ProgressHandler = new Progress<long>(l =>
                 {
-                    logger.LogInformation("Transferred {UploadedBytes} bytes to Azure Blob", l);
+                    if (DateTime.UtcNow - lastLogTime >= logInterval)
+                    {
+                        logger.LogInformation("{BlobName}: transferred {TotalMiB:F2} MiB to Azure Blob", settings.BlobName, (double) l / 1024/1024);
+                        lastLogTime = DateTime.UtcNow;
+                    }
+
+                    totalBytes = l;
                 })
+                
             }, cancellationToken);
+
+            var swWrite = new Stopwatch();
+            swWrite.Start();
             await writeToStream(blobStream);
+            swWrite.Stop();
+
+            if (totalBytes != 0)
+            {
+                var totalMib = (double) totalBytes / 1024 / 1024;
+
+                logger.LogInformation("{BlobName}: transferred {TotalMiB:F2} Mib to Azure Blob in {TotalTime} seconds.", settings.BlobName, totalMib, swWrite.Elapsed.TotalSeconds);
+            }
         }
 
         public IEnumerable<IDataExtensionSettings> GetSettings()
